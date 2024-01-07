@@ -77,35 +77,24 @@ class ReflexAgent(Agent):
         "*** YOUR CODE HERE ***"
 
         newFood = currentGameState.getFood()
-        ghostPositions = successorGameState.getGhostPositions()
 
         # czy trzeba uciekać
-        for ghostPos in ghostPositions:
-            # If a ghost is at the new position or next to it
-            if ghostPos == newPos or util.manhattanDistance(ghostPos, newPos) == 1:
-                # Don't go there
+        for ghostPos in successorGameState.getGhostPositions():
+            if util.manhattanDistance(ghostPos, newPos) <= 1:
                 return -inf
-            # If there is food in the new position
-            else:
-                if newFood[newPos[0]][newPos[1]]:
-                    # There is no ghost there or next to it,
-                    # so go there and eat the dot
-                    return inf
 
-        # Pacman is not in immediate danger in the new position, but there is no food there
-        # Now estimating the nearest food dot:
+        # czy jedzenie obok
+        if newFood[newPos[0]][newPos[1]]:
+            return float('inf')
 
-        # jedzenie gdy brak zagrożenia
+        # dystans do jedzenia
         minDist = -inf
-        foods = newFood.asList()
 
-        for food in foods:
+        for food in newFood.asList():
             dist = util.manhattanDistance(food, newPos) * -1
             if dist > minDist:
                 minDist = dist
 
-        # We return -minDist, because the higher value is better,
-        # and a state near a food dot is more preferable.
         return minDist
 
 
@@ -354,6 +343,55 @@ def betterEvaluationFunction(currentGameState: GameState):
     DESCRIPTION: <write something here so we know what you did>
     """
     "*** YOUR CODE HERE ***"
+
+    newPos = currentGameState.getPacmanPosition()
+    newFood = currentGameState.getFood()
+
+    if (currentGameState.isWin() or currentGameState.isLose()):
+        return scoreEvaluationFunction(currentGameState)
+
+    #standardowa ocena - ilosc jedzenia na planszy
+    score = scoreEvaluationFunction(currentGameState) - (5 * len(newFood.asList()))
+
+    # duchy
+    ghostPositions = []
+    eatableGhostPositions = []
+    for ghost in currentGameState.getGhostStates():
+        dis = util.manhattanDistance(newPos, ghost.getPosition())
+        if ghost.scaredTimer == 0:
+            ghostPositions.append(dis)
+        else:
+            eatableGhostPositions.append(dis)
+
+    # duchy zwykle
+    minDist = 1
+    if ghostPositions:
+        minDist = inf
+        for ghostPos in ghostPositions:
+            if ghostPos < minDist:
+                minDist = ghostPos
+
+    score -= (1.0 / minDist)
+
+    # duchy jadalne
+    minDist = 0
+    if eatableGhostPositions:
+        minDist = inf
+        for ghostPos in eatableGhostPositions:
+            if ghostPos < minDist:
+                minDist = ghostPos
+
+    score -= minDist
+
+    # jedzeinie najbliższe
+    minDist = inf
+    for food in newFood.asList():
+        dist = util.manhattanDistance(food, newPos)
+        if dist < minDist:
+            minDist = dist
+
+    score -= 2 * minDist
+    return score
 
 
 # Abbreviation
